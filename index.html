@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OMR Checker Pro</title>
+<style>
+:root{--navy:#10213d;--blue:#2563eb;--bg:#f3f6fb;--line:#dbe3ef}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,"Noto Sans Bengali",sans-serif;color:#172033}
+header{background:var(--navy);color:white;padding:18px 16px}header h1{margin:0;font-size:22px}header p{margin:5px 0 0;color:#cbd5e1;font-size:13px}
+main{max-width:980px;margin:18px auto;padding:0 12px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+button,.btn{border:0;border-radius:10px;padding:11px 14px;background:var(--blue);color:#fff;font-weight:650;cursor:pointer}
+button.secondary{background:#e7edf7;color:#172033}button:disabled{opacity:.5}
+.card{background:white;border:1px solid var(--line);border-radius:15px;padding:16px;margin:12px 0;box-shadow:0 3px 12px #10213d0a}
+h2{font-size:18px;margin:0 0 12px}.muted{color:#64748b;font-size:13px}
+label{display:block;font-size:14px;font-weight:600;margin:10px 0 5px}
+input,select{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:9px;background:white;font:inherit}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.hidden{display:none!important}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+#keyGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:7px}
+.keyrow{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);padding:6px 9px;border-radius:8px;font-size:14px}
+.keyrow select{width:78px;padding:6px}
+#sheetPreview{background:white;padding:15px;border:1px dashed #94a3b8;overflow:auto}
+.sheet{width:190mm;min-height:277mm;margin:auto;background:white;color:#111;padding:9mm;font-family:Arial,sans-serif}
+.sheet h2{text-align:center;margin:0 0 5px;font-size:18px}.sheet .meta{display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:11px;margin:8px 0 12px}
+.sheet .meta span{border-bottom:1px solid #222;min-height:18px}
+.sheetgrid{display:grid;grid-template-columns:1fr 1fr;gap:7mm 9mm}
+.qcol{display:grid;grid-template-columns:repeat(2,1fr);gap:2px 8px;align-content:start}
+.q{height:5mm;display:flex;align-items:center;gap:4px;font-size:9px;white-space:nowrap}
+.q b{width:16px;text-align:right}.bubble{display:inline-flex;border:1px solid #111;border-radius:50%;width:3.1mm;height:3.1mm;align-items:center;justify-content:center;font-size:6px}
+.mark{position:absolute;width:5mm;height:5mm;background:#000}
+.sheetwrap{position:relative;width:190mm;margin:auto}
+.result{font-size:15px;line-height:1.8}.good{color:#15803d}.bad{color:#b91c1c}.warn{color:#b45309}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{border-bottom:1px solid var(--line);padding:8px;text-align:left}
+#photoCanvas{max-width:100%;border:1px solid #cbd5e1;border-radius:8px;touch-action:manipulation}
+@media print{body{background:white}.noprint,header,main>.tabs,.card:not(.printable){display:none!important}main{margin:0;padding:0}.printable{border:0;box-shadow:none;padding:0}.sheet{margin:0}}
+</style></head>
+<body>
+<header><h1>OMR CHECKER PRO</h1><p>বাংলা MCQ OMR তৈরি, স্ক্যান ও ফলাফল গণনা</p></header>
+<main>
+<div class="tabs noprint">
+<button onclick="show('setup')">সেটআপ ও Answer Key</button><button class="secondary" onclick="show('print')">OMR শিট তৈরি</button><button class="secondary" onclick="show('scan')">OMR স্ক্যান</button><button class="secondary" onclick="show('results')">ফলাফল</button>
+</div>
+<section id="setup" class="card">
+<h2>পরীক্ষার সেটআপ</h2>
+<div class="row">
+<div><label>পরীক্ষার নাম</label><input id="examName" value="SSC Model Test"></div>
+<div><label>বিষয়</label><input id="subject" value="সাধারণ গণিত"></div>
+<div><label>প্রশ্ন সংখ্যা (১–২০০)</label><input id="count" type="number" min="1" max="200" value="50"></div>
+<div><label>প্রতি সঠিক উত্তরে নম্বর</label><input id="marks" type="number" min="0" step="0.25" value="1"></div>
+<div><label>ভুল উত্তরে কাটা নম্বর</label><input id="negative" type="number" min="0" step="0.25" value="0"></div>
+</div>
+<div class="actions"><button onclick="buildKey()">Answer Key তৈরি/আপডেট</button><button class="secondary" onclick="saveData()">সেটিংস সংরক্ষণ</button></div>
+<p class="muted">প্রথমে প্রশ্ন সংখ্যা ঠিক করে Answer Key তৈরি করো। প্রতিটি প্রশ্নের সঠিক উত্তর নির্বাচন করো।</p>
+<div id="keyGrid"></div>
+</section>
+<section id="print" class="card hidden">
+<h2>প্রিন্টযোগ্য OMR শিট</h2><p class="muted">একটি শিটে সর্বোচ্চ ১০০টি প্রশ্ন থাকবে। ১০১–২০০ হলে দুই পৃষ্ঠা হবে। স্ক্যানের জন্য শিটটি ১০০% স্কেলে প্রিন্ট করো; কোনোভাবেই “fit to page” ব্যবহার করবে না।</p>
+<div class="actions"><button onclick="renderSheets()">শিট তৈরি</button><button onclick="window.print()">প্রিন্ট / PDF সংরক্ষণ</button></div>
+<div id="sheetPreview" class="printable"></div>
+</section>
+<section id="scan" class="card hidden">
+<h2>OMR ছবি স্ক্যান</h2>
+<p class="muted">এই প্রাথমিক সংস্করণে একই সফটওয়্যারের তৈরি OMR শিট ব্যবহার করো। পরিষ্কার, সোজা ও সম্পূর্ণ শিটের ছবি/স্ক্যান আপলোড করো।</p>
+<label>OMR শিটের ছবি</label><input id="photo" type="file" accept="image/*" capture="environment">
+<div class="row"><div><label>পৃষ্ঠা নম্বর</label><input id="pageNo" type="number" min="1" value="1"></div><div><label>শিক্ষার্থীর রোল</label><input id="studentRoll" placeholder="রোল নম্বর"></div><div><label>শিক্ষার্থীর নাম (ঐচ্ছিক)</label><input id="studentName" placeholder="নাম"></div></div>
+<canvas id="photoCanvas"></canvas>
+<p class="muted">ছবিটি দেখার পর “উত্তর শনাক্ত” চাপো। ছবি কাত/বাঁকা হলে বা শিটের চারপাশ কাটা থাকলে ফল নির্ভরযোগ্য নাও হতে পারে।</p>
+<div class="actions"><button onclick="readSheet()">উত্তর শনাক্ত ও নম্বর গণনা</button><button class="secondary" onclick="clearPhoto()">ছবি মুছুন</button></div>
+<div id="scanStatus" class="result"></div>
+</section>
+<section id="results" class="card hidden">
+<h2>ফলাফল তালিকা</h2><div class="actions"><button onclick="exportCSV()">CSV/Excel-এ খুলুন</button><button class="secondary" onclick="window.print()">রিপোর্ট প্রিন্ট</button><button class="secondary" onclick="clearResults()">ফলাফল মুছুন</button></div>
+<div id="resultTable"></div>
+</section>
+<p class="muted noprint">গুরুত্বপূর্ণ: এটি একটি প্রাথমিক MVP। পরীক্ষার চূড়ান্ত নম্বর দেওয়ার আগে স্ক্যান করা উত্তর ম্যানুয়ালি যাচাই করো।</p>
+</main>
+<script>
+let key=[],results=[],img=null;
+const $=id=>document.getElementById(id);
+function show(id){['setup','print','scan','results'].forEach(x=>$(x).classList.toggle('hidden',x!==id));if(id==='results')drawResults()}
+function buildKey(){let n=Math.max(1,Math.min(200,Number($('count').value)||50));$('count').value=n;let old=key;key=Array.from({length:n},(_,i)=>old[i]||'');$('keyGrid').innerHTML='';key.forEach((v,i)=>{let d=document.createElement('div');d.className='keyrow';d.innerHTML=`<b>প্রশ্ন ${i+1}</b><select aria-label="প্রশ্ন ${i+1}"><option value="">নির্বাচন</option>${['ক','খ','গ','ঘ'].map(a=>`<option ${v===a?'selected':''}>${a}</option>`).join('')}</select>`;d.querySelector('select').onchange=e=>{key[i]=e.target.value;saveData(false)};$('keyGrid').appendChild(d)});saveData(false)}
+function saveData(alert=true){localStorage.setItem('omrpro',JSON.stringify({examName:$('examName').value,subject:$('subject').value,count:$('count').value,marks:$('marks').value,negative:$('negative').value,key,results}));if(alert)alertMsg('সেটিংস সংরক্ষিত হয়েছে')}
+function alertMsg(t){$('scanStatus').textContent=t}
+function loadData(){try{let d=JSON.parse(localStorage.getItem('omrpro')||'{}');['examName','subject','count','marks','negative'].forEach(k=>{if(d[k]!==undefined)$(k).value=d[k]});key=d.key||[];results=d.results||[]}catch(e){}buildKey()}
+function renderSheets(){let n=key.length;if(!n||key.some(x=>!x)){alert('আগে সব প্রশ্নের Answer Key পূরণ করো।');show('setup');return}let pages=Math.ceil(n/100),html='';for(let p=0;p<pages;p++){let start=p*100,end=Math.min(n,start+100);html+=`<div class="sheet"><h2>${esc($('examName').value)} — OMR উত্তরপত্র</h2><div style="text-align:center;font-size:11px">${esc($('subject').value)} | পৃষ্ঠা ${p+1}/${pages}</div><div class="meta"><span>রোল: __________________</span><span>রেজিস্ট্রেশন: ______________</span><span>সেট কোড: _________________</span><span>পরীক্ষার্থীর স্বাক্ষর: __________</span></div><div class="sheetgrid">`;for(let c=0;c<2;c++){html+='<div class="qcol">';for(let i=start+c*50;i<Math.min(end,start+(c+1)*50);i++){html+=`<div class="q"><b>${i+1}.</b>${['ক','খ','গ','ঘ'].map((a,j)=>`<span class="bubble">${a}</span>`).join('')}</div>`}html+='</div>'}html+='</div><div style="font-size:9px;margin-top:12px;text-align:center">প্রতিটি প্রশ্নে একটি মাত্র বৃত্ত সম্পূর্ণ কালো করো। শিট ভাঁজ বা ছেঁড়া যাবে না।</div></div>'} $('sheetPreview').innerHTML=html}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+$('photo').addEventListener('change',e=>{let f=e.target.files[0];if(!f)return;let im=new Image();im.onload=()=>{img=im;let c=$('photoCanvas'),ctx=c.getContext('2d');let scale=Math.min(1000/im.width,1400/im.height,1);c.width=Math.round(im.width*scale);c.height=Math.round(im.height*scale);ctx.drawImage(im,0,0,c.width,c.height);alertMsg('ছবি লোড হয়েছে।');};im.src=URL.createObjectURL(f)});
+function clearPhoto(){img=null;$('photo').value='';$('photoCanvas').width=0;$('photoCanvas').height=0;alertMsg('')}
+function readSheet(){
+ if(!img){alert('আগে OMR ছবিটি আপলোড করো।');return}if(key.some(x=>!x)){alert('Answer Key সম্পূর্ণ করো।');show('setup');return}
+ // This reader is calibrated for the generated template; it samples expected bubble centers on the normalized page.
+ const c=$('photoCanvas'),ctx=c.getContext('2d'),w=c.width,h=c.height;
+ if(!w||!h)return;
+ let page=Number($('pageNo').value)||1,first=(page-1)*100,last=Math.min(key.length,first+100);
+ if(first>=key.length){alert('এই পৃষ্ঠা নম্বরের জন্য প্রশ্ন নেই।');return}
+ let answers=[],ambiguous=[];
+ // Generated template bubble positions: 2 columns; bubble x positions are relative to each column.
+ // Sheet content starts below title/meta. Detection uses darkness in each bubble center.
+ const top=0.205, bottom=0.905, rows=50;
+ const colLeft=[0.255,0.755], optionOffsets=[-0.105,-0.055,-0.005,0.045];
+ const radius=Math.max(2,Math.round(Math.min(w,h)*0.006));
+ function darkness(cx,cy){let data=ctx.getImageData(Math.max(0,Math.round(cx-radius)),Math.max(0,Math.round(cy-radius)),radius*2+1,radius*2+1).data,black=0,total=data.length/4;for(let i=0;i<data.length;i+=4){let lum=(data[i]+data[i+1]+data[i+2])/3;if(lum<105)black++}return black/total}
+ for(let q=first;q<last;q++){let local=q-first,col=Math.floor(local/50),row=local%50;let y=h*(top+(bottom-top)*(row+0.5)/rows),cx=w*colLeft[col];let vals=optionOffsets.map(off=>darkness(cx+w*off,y));let sorted=vals.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);let answer='';if(sorted[0].v>0.28&&sorted[1].v<sorted[0].v*0.72)answer=['ক','খ','গ','ঘ'][sorted[0].i];else ambiguous.push(q+1);answers.push(answer)}
+ let correct=0,wrong=0,blank=0;answers.forEach((a,i)=>{if(!a)blank++;else if(a===key[first+i])correct++;else wrong++});
+ let score=correct*Number($('marks').value||1)-wrong*Number($('negative').value||0);
+ let item={roll:$('studentRoll').value||'—',name:$('studentName').value||'—',page,correct,wrong,blank,score:Number(score.toFixed(2)),date:new Date().toLocaleString('bn-BD'),answers,ambiguous};
+ results.push(item);saveData(false);
+ $('scanStatus').innerHTML=`<b>স্ক্যান সম্পন্ন (প্রাথমিক শনাক্তকরণ)</b><br>সঠিক: <span class="good">${correct}</span> | ভুল: <span class="bad">${wrong}</span> | ফাঁকা: ${blank}<br>নম্বর: <b>${item.score}</b><br><span class="warn">যাচাই প্রয়োজন: ${ambiguous.length?ambiguous.join(', '):'কোনো অনিশ্চিত প্রশ্ন ধরা পড়েনি'}</span><br><small>শনাক্ত উত্তর: ${answers.map((a,i)=>(first+i+1)+':'+(a||'?')).join(' | ')}</small><br><b>সতর্কতা:</b> ছবির কোণ, প্রিন্ট স্কেল ও কাগজের অবস্থানের কারণে স্বয়ংক্রিয় পাঠ ভুল হতে পারে। ফলাফল হাতে মিলিয়ে নাও।`;
+}
+function drawResults(){if(!results.length){$('resultTable').innerHTML='<p class="muted">এখনো কোনো ফলাফল নেই।</p>';return}$('resultTable').innerHTML='<table><thead><tr><th>রোল</th><th>নাম</th><th>সঠিক</th><th>ভুল</th><th>ফাঁকা</th><th>নম্বর</th></tr></thead><tbody>'+results.map(r=>`<tr><td>${esc(r.roll)}</td><td>${esc(r.name)}</td><td>${r.correct}</td><td>${r.wrong}</td><td>${r.blank}</td><td>${r.score}</td></tr>`).join('')+'</tbody></table>'}
+function exportCSV(){let rows=[['Roll','Name','Correct','Wrong','Blank','Score'],...results.map(r=>[r.roll,r.name,r.correct,r.wrong,r.blank,r.score])];let csv='\ufeff'+rows.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='omr-results.csv';a.click();URL.revokeObjectURL(a.href)}
+function clearResults(){if(confirm('সব ফলাফল মুছে ফেলবে?')){results=[];saveData(false);drawResults()}}
+loadData();
+</script></body></html>
